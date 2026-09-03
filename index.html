@@ -2,76 +2,75 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>KIGO BABY - Visor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KIGO BABY - Cámara Bebé</title>
 <style>
-  body{margin:0;background:#000;color:#fff;font-family:sans-serif;display:flex;flex-direction:column;height:100vh}
-  #videoBox{flex:1;background:#111;display:flex;align-items:center;justify-content:center;position:relative}
-  video{width:100%;height:100%;object-fit:cover}
-  #placeholder{position:absolute;text-align:center;color:#666}
-  #controls{background:#1a1a1a;padding:16px;border-radius:20px 20px 0 0}
-  .row{display:flex;justify-content:space-between;align-items:center;margin:8px 0}
-  #nivel{height:12px;background:#333;border-radius:10px;overflow:hidden;flex:1;margin:0 12px}
-  #nivelFill{height:100%;width:0%;background:#22c55e;transition:width 0.2s}
-  .llorando #nivelFill{background:#ef4444}
-  button{width:100%;height:48px;border-radius:12px;border:0;font-weight:800;font-size:15px}
-  .btn-audio{background:#fff;color:#000}
-  .btn-qr{background:#222;color:#fff;margin-top:8px;border:1px solid #333}
-  #estado{font-size:11px;padding:6px 10px;border-radius:20px;background:#222}
-  #estado.conectado{background:#22c55e;color:#000}
-  #estado.llanto{background:#ef4444;color:#fff;animation:parpadeo 0.5s infinite}
-  @keyframes parpadeo{50%{opacity:0.5}}
+ body{margin:0;background:#000;color:#fff;font-family:sans-serif;text-align:center;padding:20px}
+ video{width:100%;max-width:400px;border-radius:20px;background:#111;transform:scaleX(-1)}
+ button{width:100%;max-width:400px;height:60px;border-radius:15px;border:0;font-weight:900;font-size:18px;margin-top:15px}
+.iniciar{background:#22c55e}.detener{background:#ef4444;color:#fff}
+ #qr{margin:20px auto;background:#fff;padding:15px;border-radius:15px;width:220px;display:none}
 </style>
 </head>
 <body>
-  <div id="videoBox">
-    <video id="video" autoplay playsinline></video>
-    <div id="placeholder"><div style="font-size:40px">👶</div><div>Esperando cámara del bebé...</div><small>Escanea el QR del otro celular</small></div>
-  </div>
-  <div id="controls">
-    <div class="row">
-      <span style="font-weight:800">KIGO BABY</span>
-      <span id="estado">Desconectado</span>
-    </div>
-    <div class="row">
-      <span style="font-size:12px">Ruido</span>
-      <div id="nivel"><div id="nivelFill"></div></div>
-      <span id="db" style="font-size:12px">0%</span>
-    </div>
-    <div id="alerta" style="display:none;background:#ef4444;padding:8px;border-radius:8px;text-align:center;font-weight:800;margin-bottom:8px">¡BEBÉ LLORANDO! 🔔</div>
-    <button class="btn-audio" onclick="toggleAudio()">🔊 Activar Audio</button>
-    <button class="btn-qr" onclick="conectar()">📷 Escanear QR para conectar</button>
-  </div>
-<script>
-let audioActivo=false;
-let nivelSim=0;
-function toggleAudio(){
-  audioActivo=!audioActivo;
-  document.querySelector('.btn-audio').innerText=audioActivo?'🔇 Silenciar':'🔊 Activar Audio';
-  document.getElementById('video').muted=!audioActivo;
-}
-// Simulación de nivel de ruido para que veas como funciona la alerta
-setInterval(()=>{
-  nivelSim=Math.random()*100;
-  document.getElementById('nivelFill').style.width=nivelSim+'%';
-  document.getElementById('db').innerText=Math.round(nivelSim)+'%';
-  let alerta=document.getElementById('alerta');
-  let estado=document.getElementById('estado');
-  if(nivelSim>75){
-    document.getElementById('controls').classList.add('llorando');
-    alerta.style.display='block';
-    estado.innerText='¡LLANTO DETECTADO!';
-    estado.className='llanto';
-    if(navigator.vibrate) navigator.vibrate(200);
-  } else {
-    document.getElementById('controls').classList.remove('llorando');
-    alerta.style.display='none';
-    estado.innerText='Conectado - Silencio';
-    estado.className='conectado';
-  }
-},300);
+<h2>👶 Cámara Bebé</h2>
+<video id="localVideo" autoplay muted playsinline></video>
+<div id="status">Listo para iniciar</div>
+<button id="btnStart" class="iniciar" onclick="iniciar()">INICIAR CÁMARA</button>
+<div id="qr"></div>
+<small>Deja este celular conectado a la luz, apuntando al bebé. No lo cierres.</small>
 
-function conectar(){alert('Aquí va el lector QR en la Parte 3. Por ahora es simulación.');}
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<script>
+// PEGA AQUI TU CONFIG DE FIREBASE
+const firebaseConfig = {
+  apiKey: "TU_API_KEY",
+  projectId: "TU_PROJECT_ID",
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let localStream, pc;
+const salaId = "sala_" + Math.random().toString(36).substring(2,8);
+async function iniciar(){
+  document.getElementById('status').innerText="Pidiendo permisos...";
+  localStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}, audio:true});
+  document.getElementById('localVideo').srcObject = localStream;
+
+  // Evita que se apague la pantalla
+  try{ await navigator.wakeLock.request('screen'); }catch(e){}
+
+  document.getElementById('status').innerText="Transmitiendo en sala: "+salaId;
+  document.getElementById('btnStart').innerText="TRANSMITIENDO...";
+  document.getElementById('btnStart').className="detener";
+
+  // QR simple con el ID de la sala
+  document.getElementById('qr').style.display='block';
+  document.getElementById('qr').innerHTML = `<div style="color:#000;font-weight:900">${salaId}</div><small style="color:#000">Este código escribe en el otro celular</small>`;
+
+  pc = new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});
+  localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
+
+  const salaRef = db.collection('kigo_baby').doc(salaId);
+  pc.onicecandidate = e => { if(e.candidate) salaRef.collection('caller').add(e.candidate.toJSON()); }
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  await salaRef.set({offer: {type:offer.type, sdp:offer.sdp}});
+
+  salaRef.onSnapshot(async snap=>{
+    const data=snap.data();
+    if(data && data.answer &&!pc.currentRemoteDescription){
+      await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+    }
+  });
+  salaRef.collection('answerer').onSnapshot(snap=>{
+    snap.docChanges().forEach(async change=>{
+      if(change.type==='added'){ await pc.addIceCandidate(new RTCIceCandidate(change.doc.data())); }
+    });
+  });
+}
 </script>
 </body>
-</html>
+  </html>
