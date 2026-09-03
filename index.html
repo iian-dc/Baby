@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>KIGO BABY - Visor</title>
+<style>
+  body{margin:0;background:#000;color:#fff;font-family:sans-serif;display:flex;flex-direction:column;height:100vh}
+  #videoBox{flex:1;background:#111;display:flex;align-items:center;justify-content:center;position:relative}
+  video{width:100%;height:100%;object-fit:cover}
+  #placeholder{position:absolute;text-align:center;color:#666}
+  #controls{background:#1a1a1a;padding:16px;border-radius:20px 20px 0 0}
+  .row{display:flex;justify-content:space-between;align-items:center;margin:8px 0}
+  #nivel{height:12px;background:#333;border-radius:10px;overflow:hidden;flex:1;margin:0 12px}
+  #nivelFill{height:100%;width:0%;background:#22c55e;transition:width 0.2s}
+  .llorando #nivelFill{background:#ef4444}
+  button{width:100%;height:48px;border-radius:12px;border:0;font-weight:800;font-size:15px}
+  .btn-audio{background:#fff;color:#000}
+  .btn-qr{background:#222;color:#fff;margin-top:8px;border:1px solid #333}
+  #estado{font-size:11px;padding:6px 10px;border-radius:20px;background:#222}
+  #estado.conectado{background:#22c55e;color:#000}
+  #estado.llanto{background:#ef4444;color:#fff;animation:parpadeo 0.5s infinite}
+  @keyframes parpadeo{50%{opacity:0.5}}
+</style>
+</head>
+<body>
+  <div id="videoBox">
+    <video id="video" autoplay playsinline></video>
+    <div id="placeholder"><div style="font-size:40px">👶</div><div>Esperando cámara del bebé...</div><small>Escanea el QR del otro celular</small></div>
+  </div>
+  <div id="controls">
+    <div class="row">
+      <span style="font-weight:800">KIGO BABY</span>
+      <span id="estado">Desconectado</span>
+    </div>
+    <div class="row">
+      <span style="font-size:12px">Ruido</span>
+      <div id="nivel"><div id="nivelFill"></div></div>
+      <span id="db" style="font-size:12px">0%</span>
+    </div>
+    <div id="alerta" style="display:none;background:#ef4444;padding:8px;border-radius:8px;text-align:center;font-weight:800;margin-bottom:8px">¡BEBÉ LLORANDO! 🔔</div>
+    <button class="btn-audio" onclick="toggleAudio()">🔊 Activar Audio</button>
+    <button class="btn-qr" onclick="conectar()">📷 Escanear QR para conectar</button>
+  </div>
+<script>
+let audioActivo=false;
+let nivelSim=0;
+function toggleAudio(){
+  audioActivo=!audioActivo;
+  document.querySelector('.btn-audio').innerText=audioActivo?'🔇 Silenciar':'🔊 Activar Audio';
+  document.getElementById('video').muted=!audioActivo;
+}
+// Simulación de nivel de ruido para que veas como funciona la alerta
+setInterval(()=>{
+  nivelSim=Math.random()*100;
+  document.getElementById('nivelFill').style.width=nivelSim+'%';
+  document.getElementById('db').innerText=Math.round(nivelSim)+'%';
+  let alerta=document.getElementById('alerta');
+  let estado=document.getElementById('estado');
+  if(nivelSim>75){
+    document.getElementById('controls').classList.add('llorando');
+    alerta.style.display='block';
+    estado.innerText='¡LLANTO DETECTADO!';
+    estado.className='llanto';
+    if(navigator.vibrate) navigator.vibrate(200);
+  } else {
+    document.getElementById('controls').classList.remove('llorando');
+    alerta.style.display='none';
+    estado.innerText='Conectado - Silencio';
+    estado.className='conectado';
+  }
+},300);
+
+function conectar(){alert('Aquí va el lector QR en la Parte 3. Por ahora es simulación.');}
+</script>
+</body>
+</html>
